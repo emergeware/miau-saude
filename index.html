@@ -151,6 +151,56 @@ input:focus,select:focus{outline:none;border-color:var(--accent)}
 .modal-overlay{position:fixed;inset:0;background:rgba(44,42,37,0.5);z-index:200;display:none;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 .modal-overlay.show{display:flex}
 .modal-content{max-width:520px;width:100%;max-height:90vh;overflow-y:auto;animation:scaleIn 0.3s ease both}
+
+/* ===================== v7.1 — refinamento de apresentação (não-destrutivo) ===================== */
+/* Acessibilidade: respeitar reduced-motion */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important;scroll-behavior:auto!important}
+}
+/* Sombras em camadas (mais profundidade, mesmo tom) */
+:root{
+  --shadow:0 1px 2px rgba(44,42,37,0.04),0 6px 18px rgba(44,42,37,0.06);
+  --shadow-lg:0 2px 8px rgba(44,42,37,0.06),0 16px 44px rgba(44,42,37,0.12);
+}
+/* Foco de teclado visível (a11y floor) */
+.btn:focus-visible,.opt:focus-visible,.role-card:focus-visible,.lang-btn:focus-visible,
+select:focus-visible,input:focus-visible,.btn-ghost:focus-visible,.audio-play:focus-visible{
+  outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--radius-sm)
+}
+/* Cartões: leve elevação na interação */
+.card{transition:box-shadow .28s cubic-bezier(.22,1,.36,1),transform .28s cubic-bezier(.22,1,.36,1)}
+.role-card{transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease}
+.role-card:hover{transform:translateY(-1px)}
+/* Botões: profundidade sutil + transição refinada */
+.btn{transition:background .2s ease,box-shadow .2s ease,transform .12s ease,border-color .2s ease}
+.btn-primary{box-shadow:0 2px 8px rgba(91,74,138,0.18)}
+.btn-primary:hover{box-shadow:0 5px 16px rgba(91,74,138,0.28);transform:translateY(-1px)}
+.btn-primary:active{transform:scale(0.98)}
+/* Opções (chips): seleção mais viva */
+.opt{transition:all .18s cubic-bezier(.22,1,.36,1)}
+.opt.sel{box-shadow:0 1px 5px rgba(91,74,138,0.14)}
+/* Barras de contribuição: o momento de dados — mais polidas */
+.contrib-track{height:16px;box-shadow:inset 0 1px 2px rgba(44,42,37,0.07)}
+.contrib-fill{transition:width 1.05s cubic-bezier(.22,1,.36,1);box-shadow:inset 0 1px 0 rgba(255,255,255,0.28)}
+.contrib-label,.contrib-val{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+/* Cartões de métrica: leve lift + números tabulares */
+.metric{border:1px solid var(--card-border);transition:transform .2s ease,box-shadow .2s ease}
+.metric:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.metric-val{font-variant-numeric:tabular-nums;letter-spacing:-0.3px}
+/* Medidor (gauge): sombra suave */
+.gauge-wrap svg{filter:drop-shadow(0 4px 12px rgba(44,42,37,0.08))}
+/* Barra de risco ao vivo: transição mais natural */
+.live-fill{transition:width .55s cubic-bezier(.22,1,.36,1)}
+.live-val{font-variant-numeric:tabular-nums}
+/* Recomendações: micro-interação */
+.rec-item{transition:transform .2s ease,box-shadow .2s ease}
+.rec-item:hover{transform:translateX(2px)}
+/* Tipografia display: tracking refinado */
+.logo-text,.about-title{letter-spacing:-0.5px}
+/* Campos de formulário: foco coeso */
+input[type=number]:focus,select:focus{box-shadow:0 0 0 3px var(--accent-light)}
+/* Inputs e selects com números tabulares */
+input[type=number]{font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -215,13 +265,13 @@ function compute(){
 
   var cortico=rv("cortico");
   var h1=(aN*0.4+wN*0.3+isSr*0.3+bR+fem*0.12)/1.6;
-  var h2=hc*0.5+skS*0.3+(cortico==="y"?0.2:0);
+  var h2=hc*0.8+(cortico==="y"?0.2:0);
   var h3=nu;var h4=gi;var h5=ev;
 
-  var raw=h2*0.35+h1*0.25+h3*0.15+h5*0.15+h4*0.10+skS*0.15;
-  var logit=(raw-0.32)*5;
+  var raw=h1*0.53+h3*0.15+h5*0.12+h2*0.11+h4*0.09;
+  var logit=(raw-0.40)*5.4;
   var prob=1/(1+Math.exp(-logit));
-  prob=Math.max(0.05,Math.min(prob,0.95));
+  prob=Math.max(0.05,Math.min(prob,0.85));
   return {prob:prob,h:{h1:h1,h2:h2,h3:h3,h4:h4,h5:h5},nSk:nSk,nC:nC};
 }
 
@@ -242,7 +292,7 @@ pt:{
   aboutTitle:"Sobre esta pesquisa",
   aboutT1:'Esta ferramenta resulta da dissertacao de mestrado apresentada ao Messerli Research Institute da Universidade de Medicina Veterinaria de Viena (Diretor: Univ.-Prof. Dr. Herwig Grimm).',
   aboutT2:'"Desnutricao em Gatos com Dermatite? Um Estudo Transversal Global" — estudo com 1.512 gatos domesticos sobre a relacao entre dermatite felina e fatores nutricionais, demograficos, de saude, gastrointestinais e ambientais.',
-  aboutT3:'O modelo preditivo corrigido (AUC 0.878) integra cinco hipoteses validadas para triagem de risco dermatologico.',
+  aboutT3:'O modelo preditivo corrigido (AUC 0.69–0.73) integra cinco hipoteses validadas para triagem de risco dermatologico.',
   aboutT4:'Dissertacao de Mestrado | Mestrado Interdisciplinar em Interacoes Humano-Animais | 310801 WS 2024/25',
   aboutT5:'Isabele Pedrozo Martins (Mat: 12304239) | Orientadora: Franziska Roth-Walter | Viena, marco 2026',
   audioLabel:"Ouca sobre a pesquisa",audioSub:"Apresentacao em audio",
@@ -257,7 +307,7 @@ pt:{
   rMsg_v:{low:"Baixa probabilidade de dermatite. Monitoramento padrao.",mod:"Risco moderado. Avaliacao preventiva indicada.",high:"Alto risco. Investigacao dermatologica prioritaria."},
   resT:"Resultado da avaliacao do seu gatinho",resV:"Resultado da triagem clinica",
   disc_t:"Este teste e orientativo e nao substitui consulta veterinaria. Baseado em estudo com 1.512 gatos — Messerli Research Institute, Vetmeduni Wien.",
-  disc_v:"Triagem baseada em 1.512 gatos (Messerli Research Institute, Vetmeduni Wien). Modelo AUC 0.878. Confirmar positivos com exame clinico.",
+  disc_v:"Triagem baseada em 1.512 gatos (Messerli Research Institute, Vetmeduni Wien). Modelo AUC 0.69–0.73. Confirmar positivos com exame clinico.",
   s1_age:"Quantos anos tem o gatinho?",s1_age_v:"Idade (anos)",s1_wt:"Quanto pesa? (kg)",s1_wt_v:"Peso (kg)",
   s1_sex:"Sexo",s1_f:"Femea",s1_m:"Macho",s1_cast:"E castrado(a)?",s1_cast_v:"Castrado",
   s1_y:"Sim",s1_n:"Nao",s1_u:"Nao sei",s1_breed:"Qual a raca?",s1_breed_v:"Raca",s1_breed_ph:"Ex: Persa, Siames, SRD...",  s1_age_ph:"Ex: 3, 5.5, 12...",s1_wt_ph:"Ex: 3.5, 4.8, 6...",
@@ -317,7 +367,7 @@ en:{
   aboutTitle:"About this research",
   aboutT1:'This tool results from the master\'s dissertation at the Messerli Research Institute, University of Veterinary Medicine Vienna (Director: Univ.-Prof. Dr. Herwig Grimm).',
   aboutT2:'"Malnutrition in Cats with Dermatitis? A Global Cross-Sectional Study" — a study of 1,512 domestic cats on feline dermatitis risk factors.',
-  aboutT3:'The corrected model (AUC 0.878) integrates five validated hypotheses for dermatological risk screening.',
+  aboutT3:'The corrected model (AUC 0.69–0.73) integrates five validated hypotheses for dermatological risk screening.',
   aboutT4:'Master\'s Dissertation | Interdisciplinary Master in Human-Animal Interactions | 310801 WS 2024/25',
   aboutT5:'Isabele Pedrozo Martins (ID: 12304239) | Supervisor: Franziska Roth-Walter | Vienna, March 2026',
   audioLabel:"Listen about the research",audioSub:"Audio presentation",
@@ -332,7 +382,7 @@ en:{
   rMsg_v:{low:"Low dermatitis probability. Standard monitoring.",mod:"Moderate risk. Preventive assessment indicated.",high:"High risk. Priority dermatological investigation."},
   resT:"Your cat's assessment",resV:"Clinical screening result",
   disc_t:"This is a screening tool only and does not replace veterinary consultation. Based on 1,512 cats — Messerli Research Institute, Vetmeduni Wien.",
-  disc_v:"Screening based on 1,512 cats (Messerli Research Institute, Vetmeduni Wien). Model AUC 0.878. Confirm positives with clinical exam.",
+  disc_v:"Screening based on 1,512 cats (Messerli Research Institute, Vetmeduni Wien). Model AUC 0.69–0.73. Confirm positives with clinical exam.",
   s1_age:"How old is your cat? (years)",s1_age_v:"Age (years)",s1_wt:"Weight (kg)",s1_wt_v:"Weight (kg)",
   s1_sex:"Sex",s1_f:"Female",s1_m:"Male",s1_cast:"Neutered/Spayed?",s1_cast_v:"Neutered/Spayed",
   s1_y:"Yes",s1_n:"No",s1_u:"Don't know",s1_breed:"Breed",s1_breed_v:"Breed",s1_breed_ph:"e.g. Persian, Siamese, Mixed...",  s1_age_ph:"e.g. 3, 5.5, 12...",s1_wt_ph:"e.g. 3.5, 4.8, 6...",
@@ -392,7 +442,7 @@ de:{
   aboutTitle:"Ueber diese Forschung",
   aboutT1:'Dieses Tool resultiert aus der Masterarbeit am Messerli Forschungsinstitut der Veterinaermedizinischen Universitaet Wien (Direktor: Univ.-Prof. Dr. Herwig Grimm).',
   aboutT2:'"Mangelernaehrung bei Katzen mit Dermatitis? Eine globale Querschnittsstudie" — 1.512 Katzen ueber feline Dermatitis-Risikofaktoren.',
-  aboutT3:'Das korrigierte Modell (AUC 0,878) integriert fuenf Hypothesen fuer Risiko-Screening.',
+  aboutT3:'Das korrigierte Modell (AUC 0,69–0,73) integriert fuenf Hypothesen fuer Risiko-Screening.',
   aboutT4:'Masterarbeit | Interdisziplinaerer Master Mensch-Tier-Interaktionen | 310801 WS 2024/25',
   aboutT5:'Isabele Pedrozo Martins (Matr.: 12304239) | Betreuerin: Franziska Roth-Walter | Wien, Maerz 2026',
   audioLabel:"Ueber die Forschung hoeren",audioSub:"Audio-Praesentation",
@@ -407,7 +457,7 @@ de:{
   rMsg_v:{low:"Geringe Dermatitis-Wahrscheinlichkeit. Standardueberwachung.",mod:"Maessiges Risiko. Praeventive Bewertung angezeigt.",high:"Hohes Risiko. Priorisierte dermatologische Untersuchung."},
   resT:"Bewertung Ihrer Katze",resV:"Klinisches Screening-Ergebnis",
   disc_t:"Nur zur Information. Ersetzt nicht tieraerztliche Beratung. Basiert auf 1.512 Katzen — Messerli Research Institute, Vetmeduni Wien.",
-  disc_v:"Screening: 1.512 Katzen, Messerli/Vetmeduni Wien. AUC 0,878. Positives mit klinischer Untersuchung bestaetigen.",
+  disc_v:"Screening: 1.512 Katzen, Messerli/Vetmeduni Wien. AUC 0,69–0,73. Positives mit klinischer Untersuchung bestaetigen.",
   s1_age:"Alter Ihrer Katze (Jahre)?",s1_age_v:"Alter (Jahre)",s1_wt:"Gewicht (kg)",s1_wt_v:"Gewicht (kg)",
   s1_sex:"Geschlecht",s1_f:"Weiblich",s1_m:"Maennlich",s1_cast:"Kastriert?",s1_cast_v:"Kastriert",
   s1_y:"Ja",s1_n:"Nein",s1_u:"Weiss nicht",s1_breed:"Rasse",s1_breed_v:"Rasse",s1_breed_ph:"z.B. Perser, Siamese, Mischling...",  s1_age_ph:"z.B. 3, 5.5, 12...",s1_wt_ph:"z.B. 3.5, 4.8, 6...",
@@ -574,7 +624,7 @@ function openAbout(){
     '<div class="about-grid"><div class="about-stat"><div class="about-stat-val">'+popVal+'</div><div class="about-stat-lbl">'+t.mPop+'</div></div>'+
     '<div class="about-stat"><div class="about-stat-val">520</div><div class="about-stat-lbl">Variables</div></div>'+
     '<div class="about-stat"><div class="about-stat-val">5</div><div class="about-stat-lbl">Hypotheses</div></div>'+
-    '<div class="about-stat"><div class="about-stat-val">0.878</div><div class="about-stat-lbl">AUC</div></div></div>'+
+    '<div class="about-stat"><div class="about-stat-val">0.69–0.73</div><div class="about-stat-lbl">AUC</div></div></div>'+
     '<div style="border-top:1px solid var(--card-border);padding-top:10px">'+
     '<p style="font-size:0.7rem;color:var(--text3);line-height:1.6;margin-bottom:4px">'+t.aboutT4+'</p>'+
     '<p style="font-size:0.7rem;color:var(--text3);line-height:1.6">'+t.aboutT5+'</p></div>'+
@@ -621,7 +671,7 @@ function render(){
     '<div class="about-grid"><div class="about-stat"><div class="about-stat-val">'+popVal+'</div><div class="about-stat-lbl">'+t.mPop+'</div></div>'+
     '<div class="about-stat"><div class="about-stat-val">520</div><div class="about-stat-lbl">Variables</div></div>'+
     '<div class="about-stat"><div class="about-stat-val">5</div><div class="about-stat-lbl">Hypotheses</div></div>'+
-    '<div class="about-stat"><div class="about-stat-val">0.878</div><div class="about-stat-lbl">AUC</div></div></div>'+
+    '<div class="about-stat"><div class="about-stat-val">0.69–0.73</div><div class="about-stat-lbl">AUC</div></div></div>'+
     '<div style="border-top:1px solid var(--card-border);padding-top:10px">'+
     '<p style="font-size:0.7rem;color:var(--text3);line-height:1.6;margin-bottom:4px">'+t.aboutT4+'</p>'+
     '<p style="font-size:0.7rem;color:var(--text3);line-height:1.6">'+t.aboutT5+'</p></div>'+
@@ -654,7 +704,7 @@ function render(){
     var circ=Math.PI*rr;
     var dashOff=circ*(1-prob);
 
-    var sorted=[["h2",hLabels.h2,HC.h2],["h1",hLabels.h1,HC.h1],["h3",hLabels.h3,HC.h3],["h5",hLabels.h5,HC.h5],["h4",hLabels.h4,HC.h4]];
+    var sorted=[["h1",hLabels.h1,HC.h1],["h3",hLabels.h3,HC.h3],["h5",hLabels.h5,HC.h5],["h2",hLabels.h2,HC.h2],["h4",hLabels.h4,HC.h4]];
 
     /* Build recommendations based on actual data (v4 style) */
     var tips="";
@@ -704,8 +754,8 @@ function render(){
     sorted.map(function(f){var v=Math.round(r.h[f[0]]*100);return '<div class="contrib-row"><span class="contrib-label">'+f[1]+'</span><div class="contrib-track"><div class="contrib-fill" style="width:'+Math.max(v,3)+'%;background:'+f[2]+'"></div></div><span class="contrib-val" style="color:'+f[2]+'">'+v+'%</span></div>';}).join("")+'</div>'+
     '<div class="anim-up d3" style="margin-bottom:18px">'+tips+'</div>'+
     '<div class="metrics anim-up d4"><div class="metric"><div class="metric-val">'+popVal+'</div><div class="metric-label">'+t.mPop+'</div></div>'+
-    '<div class="metric"><div class="metric-val">24.7%</div><div class="metric-label">'+t.mPrev+'</div></div>'+
-    '<div class="metric"><div class="metric-val">0.878</div><div class="metric-label">'+t.mAUC+'</div></div></div>'+
+    '<div class="metric"><div class="metric-val">25.5%</div><div class="metric-label">'+t.mPrev+'</div></div>'+
+    '<div class="metric"><div class="metric-val">0.69–0.73</div><div class="metric-label">'+t.mAUC+'</div></div></div>'+
     '<div class="disc anim-up d5"><div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:6px;opacity:0.6"><img src="'+LOGO_VM+'" alt="" style="height:22px"><img src="'+LOGO_MS+'" alt="" style="height:20px"></div><p>'+disc+'</p></div>'+
     '<div style="text-align:center;margin-bottom:10px" class="anim-up d5"><button class="btn-ghost" onclick="openAbout()">'+t.about+'</button></div>'+
     '<div class="nav-row anim-up d6"><button class="btn btn-outline" onclick="set({step:1,answers:{},showResult:false})">'+t.newA+'</button>'+
