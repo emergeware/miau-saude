@@ -243,8 +243,6 @@ function compute(){
 
   var sks=["dandruff","alopecia","greasy","scabs","dull","hairloss","itch","redness","lesions","ear","acne","overgroom","stopgroom"];
   var nSk=sks.filter(function(s){return ck(s);}).length;
-  var sev=parseInt(rv("sev"))||0;
-  var skS=Math.min(nSk*0.1+sev*0.08,1);
 
   var diet=rv("diet"),varN=parseInt(rv("variety"))||3,intol=rv("intol");
   var nu=0;
