@@ -260,8 +260,8 @@ function compute(){
   var ev=0;
   if(env==="io")ev+=0.15;if(env==="out")ev+=0.25;
   if(loc==="sub")ev+=0.15;if(loc==="rur")ev+=0.3;
-  if(ck("mpet"))ev+=0.1;if(ck("dogs"))ev+=0.15;if(ck("smoke"))ev+=0.1;
-  ev=Math.min(ev,1);
+  if(ck("mpet"))ev+=0.1;if(ck("dogs"))ev-=0.10;if(ck("smoke"))ev+=0.1;
+  ev=Math.max(0,Math.min(ev,1));
 
   var cortico=rv("cortico");
   var h1=(aN*0.4+wN*0.3+isSr*0.3+bR+fem*0.12)/1.6;
@@ -347,7 +347,7 @@ pt:{
   tip_comorbid:"Outros problemas de saude aumentam risco na pele.",
   tip_vet_visit:"Consulta veterinaria recomendada.",
   tip_smoke_t:"Fumaca piora problemas de pele em gatos.",
-  tip_dogs_t:"Gatos com caes: 63%% dermatite no estudo.",
+  tip_dogs_t:"Gatos com caes: menor risco (21%% vs 27%%) - fator protetor.",
   tip_v_routine:"Exame dermatologico de rotina anual.",
   tip_v_maintain:"Manter protocolo e prevencao antiparasitaria.",
   tip_v_3mo:"Avaliacao dermatologica em 3 meses.",
@@ -422,7 +422,7 @@ en:{
   tip_comorbid:"Health issues increase skin risk.",
   tip_vet_visit:"Vet visit recommended.",
   tip_smoke_t:"Smoke worsens cat skin problems.",
-  tip_dogs_t:"Cats with dogs: 63%% dermatitis in study.",
+  tip_dogs_t:"Cats with dogs: lower risk (21%% vs 27%%) - protective.",
   tip_v_routine:"Annual dermatological exam.",
   tip_v_maintain:"Maintain protocol and antiparasitic prevention.",
   tip_v_3mo:"Dermatological assessment within 3 months.",
@@ -497,7 +497,7 @@ de:{
   tip_comorbid:"Vorerkrankungen erhoehen Hautrisiko.",
   tip_vet_visit:"Tierarztbesuch empfohlen.",
   tip_smoke_t:"Rauch verschlimmert Hautprobleme.",
-  tip_dogs_t:"Katzen mit Hunden: 63%% Dermatitis.",
+  tip_dogs_t:"Katzen mit Hunden: geringeres Risiko (21%% vs 27%%) - schuetzend.",
   tip_v_routine:"Jaehrliche dermatologische Untersuchung.",
   tip_v_maintain:"Management und Parasitenvorsorge beibehalten.",
   tip_v_3mo:"Dermatologische Bewertung in 3 Monaten.",
@@ -725,7 +725,7 @@ function render(){
         if(rv("intol")==="y")tips+='<div class="rec-item warn"><span class="rec-text">'+t.tip_food_react+'</span></div>';
       }
       if(ck("smoke"))tips+='<div class="rec-item warn"><span class="rec-text">'+t.tip_smoke_t+'</span></div>';
-      if(ck("dogs"))tips+='<div class="rec-item warn"><span class="rec-text">'+t.tip_dogs_t+'</span></div>';
+      if(ck("dogs"))tips+='<div class="rec-item good"><span class="rec-text">'+t.tip_dogs_t+'</span></div>';
     }else{
       if(lvl==="low"){
         tips+='<div class="rec-item good"><span class="rec-text">'+t.tip_v_routine+'</span></div>';
@@ -900,7 +900,7 @@ function render(){
       '<option value="rur"'+(rv("loc")==="rur"?" selected":"")+'>'+t.s5_rur+'</option></select></div>'+
       '<div class="field"><label class="field-label">'+petsLabel+'</label><div class="options">'+
       '<span class="opt'+(ck("mpet")?" warn":"")+'" onclick="toggleCheck(\'mpet\')">'+t.s5_mpet+'</span>'+
-      '<span class="opt'+(ck("dogs")?" warn":"")+'" onclick="toggleCheck(\'dogs\')">'+t.s5_dogs+'</span>'+
+      '<span class="opt excl'+(ck("dogs")?" sel":"")+'" onclick="toggleCheck(\'dogs\')">'+t.s5_dogs+'</span>'+
       '<span class="opt'+(ck("smoke")?" warn":"")+'" onclick="toggleCheck(\'smoke\')">'+t.s5_smoke+'</span>'+
       '<span class="opt excl'+(ck("none_env")?" sel":"")+'" onclick="toggleCheck(\'none_env\')">'+t.s5_none_env+'</span></div></div>';
   }
