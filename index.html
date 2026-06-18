@@ -211,6 +211,15 @@ select:focus-visible,input:focus-visible,.btn-ghost:focus-visible,.audio-play:fo
 input[type=number]:focus,select:focus{box-shadow:0 0 0 3px var(--accent-light)}
 /* Inputs e selects com números tabulares */
 input[type=number]{font-variant-numeric:tabular-nums}
+/* Botão flutuante de instalação do PWA */
+#installBtn{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);
+  display:none;align-items:center;gap:8px;z-index:300;padding:11px 18px;border:none;border-radius:999px;
+  background:var(--accent);color:#fff;font-family:var(--font);font-size:0.86rem;font-weight:700;cursor:pointer;
+  box-shadow:0 6px 22px rgba(91,74,138,0.38);transition:transform .15s ease,box-shadow .2s ease}
+#installBtn.show{display:inline-flex;animation:scaleIn .25s ease both}
+#installBtn:hover{box-shadow:0 9px 28px rgba(91,74,138,0.46)}
+#installBtn:active{transform:translateX(-50%) scale(0.97)}
+#installBtn svg{width:16px;height:16px;fill:#fff}
 </style>
 </head>
 <body>
@@ -983,6 +992,43 @@ if("serviceWorker" in navigator){
     navigator.serviceWorker.register("sw.js").catch(function(){});
   });
 }
+
+/* ═══ BOTAO "INSTALAR APP" (PWA) ═══
+   Aparece quando o navegador sinaliza que o app e instalavel (beforeinstallprompt).
+   Some quando ja esta rodando instalado (standalone) ou apos instalar. */
+(function(){
+  var INSTALL_LABEL={pt:"Instalar app",en:"Install app",de:"App installieren"};
+  var deferred=null, btn=null;
+
+  function isStandalone(){
+    return window.matchMedia("(display-mode: standalone)").matches || navigator.standalone===true;
+  }
+  function ensureBtn(){
+    if(btn) return btn;
+    btn=document.createElement("button");
+    btn.id="installBtn"; btn.type="button";
+    var lang=(typeof S!=="undefined"&&S.lang)||"pt";
+    btn.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 3v10.6l3.3-3.3 1.4 1.4L12 17.4 6.3 11.7l1.4-1.4L11 13.6V3h1zM5 19h14v2H5z"/></svg>'+
+                  '<span>'+(INSTALL_LABEL[lang]||INSTALL_LABEL.pt)+'</span>';
+    btn.addEventListener("click",function(){
+      if(!deferred) return;
+      deferred.prompt();
+      deferred.userChoice.finally(function(){ deferred=null; btn.classList.remove("show"); });
+    });
+    document.body.appendChild(btn);
+    return btn;
+  }
+  window.addEventListener("beforeinstallprompt",function(e){
+    e.preventDefault();          // evita o mini-infobar; controlamos o momento
+    deferred=e;
+    if(isStandalone()) return;
+    ensureBtn().classList.add("show");
+  });
+  window.addEventListener("appinstalled",function(){
+    deferred=null;
+    if(btn) btn.classList.remove("show");
+  });
+})();
 </script>
 </body>
 </html>
