@@ -11,6 +11,12 @@ derivada de um estudo transversal global com 1.512 gatos domésticos.
 
 [**▶ Acessar a aplicação**](https://emergeware.github.io/miau-saude/)
 
+<br>
+
+<img src="assets/qr.png" alt="QR code para abrir o MiauSaude" width="220" height="220">
+
+<sub>Aponte a câmera do celular para o QR code acima</sub>
+
 </div>
 
 ---
