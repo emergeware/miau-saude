@@ -3,7 +3,7 @@
    - HTML: network-first (sempre tenta a versao nova; cai no cache se offline).
    - Estaticos da casca: cache-first.
    - Audios (.m4a/.mp3): nunca cacheados aqui (arquivos grandes) — vao direto a rede. */
-var CACHE = "miausaude-shell-v2";
+var CACHE = "miausaude-shell-v3";
 var SHELL = [
   "./",
   "./index.html",
@@ -34,8 +34,9 @@ self.addEventListener("fetch", function(e){
   // Audios: deixa a rede tratar (nao intercepta) — evita cachear arquivos enormes.
   if (/\.(m4a|mp3)$/i.test(url.pathname)) return;
 
-  // Navegacao / HTML: network-first.
-  if (req.mode === "navigate" || (req.headers.get("accept")||"").indexOf("text/html") !== -1) {
+  // Navegacao / HTML / manifest: network-first (sempre busca a versao nova; cache offline).
+  if (req.mode === "navigate" || /manifest\.json$/i.test(url.pathname) ||
+      (req.headers.get("accept")||"").indexOf("text/html") !== -1) {
     e.respondWith(
       fetch(req).then(function(res){
         var copy = res.clone();

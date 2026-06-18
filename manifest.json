@@ -1,8 +1,8 @@
 {
-  "name": "MiauSaude — Triagem de Dermatite Felina",
+  "name": "MiauSaude — Feline Dermatitis Screening",
   "short_name": "MiauSaude",
-  "description": "Triagem de risco de dermatite felina baseada em estudo com 1.512 gatos (Messerli Research Institute, Vetmeduni Wien).",
-  "lang": "pt",
+  "description": "Evidence-based feline dermatitis risk screening from a study of 1,512 cats (Messerli Research Institute, Vetmeduni Wien).",
+  "lang": "en",
   "dir": "ltr",
   "start_url": "./",
   "scope": "./",
