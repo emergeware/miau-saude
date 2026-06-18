@@ -3,15 +3,15 @@
    - HTML: network-first (sempre tenta a versao nova; cai no cache se offline).
    - Estaticos da casca: cache-first.
    - Audios (.m4a/.mp3): nunca cacheados aqui (arquivos grandes) — vao direto a rede. */
-var CACHE = "miausaude-shell-v1";
+var CACHE = "miausaude-shell-v2";
 var SHELL = [
   "./",
   "./index.html",
   "./manifest.json",
-  "./icon-192.png",
-  "./icon-512.png",
-  "./icon-maskable-512.png",
-  "./apple-touch-icon.png"
+  "./assets/icons/icon-192.png",
+  "./assets/icons/icon-512.png",
+  "./assets/icons/icon-maskable-512.png",
+  "./assets/icons/apple-touch-icon.png"
 ];
 
 self.addEventListener("install", function(e){

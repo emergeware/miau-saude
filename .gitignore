@@ -1,3 +1,15 @@
-﻿*.log
+# Ferramentas locais / agente
+.claude/
+
+# Logs
+*.log
+
+# Sistema operacional
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Editores / IDEs
+.vscode/
+.idea/
+*.swp
