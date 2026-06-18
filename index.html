@@ -211,15 +211,30 @@ select:focus-visible,input:focus-visible,.btn-ghost:focus-visible,.audio-play:fo
 input[type=number]:focus,select:focus{box-shadow:0 0 0 3px var(--accent-light)}
 /* Inputs e selects com números tabulares */
 input[type=number]{font-variant-numeric:tabular-nums}
-/* Botão flutuante de instalação do PWA */
-#installBtn{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);
-  display:none;align-items:center;gap:8px;z-index:300;padding:11px 18px;border:none;border-radius:999px;
-  background:var(--accent);color:#fff;font-family:var(--font);font-size:0.86rem;font-weight:700;cursor:pointer;
-  box-shadow:0 6px 22px rgba(91,74,138,0.38);transition:transform .15s ease,box-shadow .2s ease}
-#installBtn.show{display:inline-flex;animation:scaleIn .25s ease both}
-#installBtn:hover{box-shadow:0 9px 28px rgba(91,74,138,0.46)}
-#installBtn:active{transform:translateX(-50%) scale(0.97)}
-#installBtn svg{width:16px;height:16px;fill:#fff}
+/* Tela de onboarding/instalacao do PWA (so aparece no navegador, nao no app instalado) */
+#installGate{position:fixed;inset:0;z-index:1000;display:none;flex-direction:column;align-items:center;justify-content:center;
+  padding:28px 20px calc(28px + env(safe-area-inset-bottom));overflow-y:auto;
+  background:linear-gradient(160deg,var(--bg2),var(--accent-light));font-family:var(--font-body);color:var(--text)}
+#installGate.show{display:flex;animation:fadeIn .25s ease both}
+.ig-card{max-width:380px;width:100%;background:var(--bg2);border:1px solid var(--card-border);border-radius:22px;
+  padding:26px 22px;box-shadow:var(--shadow-lg);text-align:center}
+.ig-icon{width:84px;height:84px;border-radius:20px;margin:0 auto 16px;display:block;box-shadow:0 8px 24px rgba(91,74,138,0.3)}
+.ig-title{font-family:var(--font-display);font-size:1.5rem;line-height:1.2;margin-bottom:8px;color:var(--text)}
+.ig-sub{font-size:0.92rem;color:var(--text2);line-height:1.5;margin-bottom:20px}
+.ig-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px 18px;border:none;
+  border-radius:14px;background:var(--accent);color:#fff;font-family:var(--font-body);font-size:1rem;font-weight:800;cursor:pointer;
+  box-shadow:0 6px 20px rgba(91,74,138,0.35);transition:transform .12s ease,box-shadow .2s ease}
+.ig-btn:hover{box-shadow:0 9px 26px rgba(91,74,138,0.45)}
+.ig-btn:active{transform:scale(0.98)}
+.ig-btn svg{width:18px;height:18px;fill:#fff}
+.ig-steps{text-align:left;margin:20px 0 4px;padding:0;list-style:none;counter-reset:s}
+.ig-steps li{position:relative;padding:8px 0 8px 38px;font-size:0.9rem;color:var(--text2);line-height:1.45;counter-increment:s}
+.ig-steps li::before{content:counter(s);position:absolute;left:0;top:6px;width:24px;height:24px;border-radius:50%;
+  background:var(--accent);color:#fff;font-size:0.8rem;font-weight:800;display:flex;align-items:center;justify-content:center}
+.ig-note{font-size:0.82rem;color:var(--text3);line-height:1.5;margin-top:16px;padding-top:14px;border-top:1px solid var(--card-border)}
+.ig-ok{color:var(--teal);font-weight:800}
+.ig-skip{display:inline-block;margin-top:16px;background:none;border:none;color:var(--text3);font-size:0.85rem;
+  font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -993,41 +1008,89 @@ if("serviceWorker" in navigator){
   });
 }
 
-/* ═══ BOTAO "INSTALAR APP" (PWA) ═══
-   Aparece quando o navegador sinaliza que o app e instalavel (beforeinstallprompt).
-   Some quando ja esta rodando instalado (standalone) ou apos instalar. */
+/* ═══ TELA DE ONBOARDING / INSTALACAO (PWA) ═══
+   Aparece SO quando o app roda no navegador (nao instalado). Quando aberto pelo icone
+   (standalone), nao aparece e vai direto ao app. Textos desta tela: sempre em ingles. */
 (function(){
-  var INSTALL_LABEL={pt:"Instalar app",en:"Install app",de:"App installieren"};
-  var deferred=null, btn=null;
+  var deferred=null, gate=null;
 
   function isStandalone(){
     return window.matchMedia("(display-mode: standalone)").matches || navigator.standalone===true;
   }
-  function ensureBtn(){
-    if(btn) return btn;
-    btn=document.createElement("button");
-    btn.id="installBtn"; btn.type="button";
-    var lang=(typeof S!=="undefined"&&S.lang)||"pt";
-    btn.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 3v10.6l3.3-3.3 1.4 1.4L12 17.4 6.3 11.7l1.4-1.4L11 13.6V3h1zM5 19h14v2H5z"/></svg>'+
-                  '<span>'+(INSTALL_LABEL[lang]||INSTALL_LABEL.pt)+'</span>';
-    btn.addEventListener("click",function(){
+  function isIOS(){
+    return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+           (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+  }
+
+  var DOWNLOAD_ICON='<svg viewBox="0 0 24 24"><path d="M12 3v10.6l3.3-3.3 1.4 1.4L12 17.4 6.3 11.7l1.4-1.4L11 13.6V3h1zM5 19h14v2H5z"/></svg>';
+  var SHARE_ICON='<svg viewBox="0 0 24 24"><path d="M12 3l4 4-1.4 1.4L13 6.8V15h-2V6.8L9.4 8.4 8 7l4-4zM5 11h3v2H6v6h12v-6h-2v-2h3a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z"/></svg>';
+
+  function stepsHTML(){
+    var li;
+    if(isIOS()){
+      li=['Tap the <strong>Share</strong> button '+SHARE_ICON+' in the Safari toolbar.',
+          'Choose <strong>“Add to Home Screen”</strong>, then <strong>Add</strong>.',
+          'Open <strong>MiauSaude</strong> from the new icon on your home screen.'];
+    }else{
+      li=['Tap <strong>“Install app”</strong> above.',
+          'Open <strong>MiauSaude</strong> from the new icon on your home screen.',
+          'From now on, always open it from that icon — not from this browser link.'];
+    }
+    return '<ol class="ig-steps"><li>'+li.join('</li><li>')+'</li></ol>';
+  }
+
+  function build(){
+    gate=document.createElement("div");
+    gate.id="installGate";
+    var installBtn = isIOS() ? '' :
+      '<button class="ig-btn" id="igInstall" type="button">'+DOWNLOAD_ICON+'<span>Install app</span></button>';
+    gate.innerHTML=
+      '<div class="ig-card">'+
+        '<img class="ig-icon" src="assets/icons/icon-192.png" alt="MiauSaude">'+
+        '<div class="ig-title">Open in full screen</div>'+
+        '<div class="ig-sub">MiauSaude works best as an installed app — full screen, with no browser bar.</div>'+
+        installBtn+
+        stepsHTML()+
+        '<div class="ig-note">Tip: if the browser ever asks, choose <strong>“Open in app”</strong>. '+
+          'Opening the link keeps you in the browser; the icon opens the full-screen app.</div>'+
+        '<button class="ig-skip" id="igSkip" type="button">Continue in browser</button>'+
+      '</div>';
+    document.body.appendChild(gate);
+
+    var skip=gate.querySelector("#igSkip");
+    if(skip) skip.addEventListener("click",function(){ gate.classList.remove("show"); });
+
+    var ib=gate.querySelector("#igInstall");
+    if(ib) ib.addEventListener("click",function(){
       if(!deferred) return;
       deferred.prompt();
-      deferred.userChoice.finally(function(){ deferred=null; btn.classList.remove("show"); });
+      deferred.userChoice.finally(function(){ deferred=null; });
     });
-    document.body.appendChild(btn);
-    return btn;
+    return gate;
   }
+
+  function showSuccess(){
+    if(!gate) return;
+    var card=gate.querySelector(".ig-card");
+    if(card) card.innerHTML=
+      '<img class="ig-icon" src="assets/icons/icon-192.png" alt="MiauSaude">'+
+      '<div class="ig-title">All set! <span class="ig-ok">✓</span></div>'+
+      '<div class="ig-sub">MiauSaude was installed. Close this tab and open it from the '+
+        '<strong>new icon</strong> on your home screen — it will open in full screen.</div>';
+    gate.classList.add("show");
+  }
+
+  // Mostra a tela ao carregar, somente se estiver no navegador (nao instalado)
+  window.addEventListener("load",function(){
+    if(isStandalone()) return;          // aberto pelo icone -> vai direto ao app
+    build().classList.add("show");
+  });
+
   window.addEventListener("beforeinstallprompt",function(e){
-    e.preventDefault();          // evita o mini-infobar; controlamos o momento
+    e.preventDefault();                 // controlamos o momento do prompt
     deferred=e;
-    if(isStandalone()) return;
-    ensureBtn().classList.add("show");
   });
-  window.addEventListener("appinstalled",function(){
-    deferred=null;
-    if(btn) btn.classList.remove("show");
-  });
+  window.addEventListener("appinstalled",function(){ deferred=null; showSuccess(); });
 })();
 </script>
 </body>
