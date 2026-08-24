@@ -54,14 +54,15 @@ Versão atual: **v8** — motor de cálculo alinhado à versão final da dissert
 | Hipóteses integradas             | 5 (validadas)                              |
 | AUC — modelo de referência       | 0,69 – 0,73 (validação cruzada 5-fold)     |
 | AUC — motor linear da aplicação  | ≈ 0,65                                     |
-| VPN (valor preditivo negativo)   | ≈ 87 %                                     |
+| VPN — modelo de referência (RF, Seção 4.8) | ≈ 87 %                          |
+| VPN — motor linear da aplicação (corte 30 %) | ≈ 78 %                        |
 | Prevalência de referência        | 25,5 %                                     |
 | Faixa de probabilidade emitida   | 5 % – 85 %                                 |
 
 A discriminação do modelo é **modesta**: ele é mais informativo para *excluir* do que para
-*confirmar* dermatite. O VPN supera o VPP, e é por isso que o teto de probabilidade é 85 % e
-não 95 % — uma ferramenta de triagem com discriminação moderada não deve emitir
-quase-certezas.
+*confirmar* dermatite. O VPN supera o VPP nos dois modelos, e é por isso que o teto de
+probabilidade é 85 % e não 95 % — uma ferramenta de triagem com discriminação moderada não
+deve emitir quase-certezas.
 
 ### Hierarquia entre domínios
 
@@ -110,8 +111,7 @@ Divergências entre o motor publicado e a dissertação estão registradas como
 
 | Issue | Assunto                                       | Consequência                                                        |
 | ----- | --------------------------------------------- | ------------------------------------------------------------------- |
-| [#1](https://github.com/emergeware/miau-saude/issues/1) | `hc` conta a alergia duas vezes | Perfis com alergia + comorbidade podem subir de banda de risco     |
-| [#2](https://github.com/emergeware/miau-saude/issues/2) | Bônus `allergy +0.30` é circular | Aguarda relabelagem do questionário e sign-off                     |
+| [#2](https://github.com/emergeware/miau-saude/issues/2) | Campo "Allergy" não qualifica o tipo | Circularidade prospectiva pela interface; decisão de produto        |
 | [#3](https://github.com/emergeware/miau-saude/issues/3) | `wet_only` ausente em H3        | Fator dietético forte (OR 2,61) não implementado, por acompanhar a tese |
 | [#4](https://github.com/emergeware/miau-saude/issues/4) | Efeito do cão sob clamp em 0    | O efeito protetor só aparece se houver outro risco ambiental       |
 
