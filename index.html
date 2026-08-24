@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>MiauSaude v7 — Feline Dermatitis Screening</title>
+<title>MiauSaude v8 — Feline Dermatitis Screening</title>
 <!-- PWA: abre em tela cheia (standalone) quando adicionado a tela inicial -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#5B4A8A">
@@ -289,23 +289,52 @@ function compute(){
   if(intol==="y")nu+=0.3;
   nu=Math.max(0,Math.min(nu,1));
 
-  var gi=(ck("vomit")?0.3:0)+(ck("diarrhea")?0.3:0)+(ck("ibd")?0.4:0);
-  gi=Math.min(gi,1);
+  /* H4 alinhado aos achados multivariados:
+     diarreia 0.40  -> unica variavel GI independentemente associada (OR 2.57; p=0.010)
+     IBD      0.30  -> mantida por plausibilidade clinica (sem associacao independente)
+     vomito   0.15  -> confundido por complexidade de saude (OR ajust. 1.13; p=0.536) */
+  var gi=(ck("vomit")?0.15:0)+(ck("diarrhea")?0.40:0)+(ck("ibd")?0.30:0);
+  gi=Math.max(0,Math.min(gi,1));
 
   var env=rv("env"),loc=rv("loc");
+  /* H5 alinhado aos achados:
+     localizacao rural/fazenda 0.30 -> maior fator ambiental (OR ajust. 1.97)
+     coabitacao com outros gatos +0.10 -> risco (OR ajust. 1.31)
+     coabitacao com CAES        -0.10 -> PROTETOR (OR ajust. 0.67; p=0.005)
+     acesso externo e fumo passivo 0.05 -> SEM associacao independente
+                                          (OR 1.05 p=0.71 / OR 1.07 p=0.70);
+                                          mantidos apenas por completude da interface */
   var ev=0;
-  if(env==="io")ev+=0.15;if(env==="out")ev+=0.25;
-  if(loc==="sub")ev+=0.15;if(loc==="rur")ev+=0.3;
-  if(ck("mpet"))ev+=0.1;if(ck("dogs"))ev-=0.10;if(ck("smoke"))ev+=0.1;
+  if(env==="io"||env==="out")ev+=0.05;
+  if(loc==="sub")ev+=0.15;if(loc==="rur")ev+=0.30;
+  if(ck("mpet"))ev+=0.10;
+  if(ck("dogs"))ev-=0.10;
+  if(ck("smoke"))ev+=0.05;
+  /* NOTA: com o clamp inferior em 0, o efeito protetor do cao so aparece
+     quando ha outro risco ambiental presente. Alterar isto exige recalibrar
+     o offset da Fase 7 -- nao mudar sem revisao cientifica. */
   ev=Math.max(0,Math.min(ev,1));
 
   var cortico=rv("cortico");
   var h1=(aN*0.4+wN*0.3+isSr*0.3+bR+fem*0.12)/1.6;
-  var h2=hc*0.8+(cortico==="y"?0.2:0);
+  /* H2 nao-circular: sinais cutaneos (skS) REMOVIDOS do escore preditivo.
+     Ponderacao 0.8 comorbidades / 0.2 corticoide (Apendice D, secao 4.2). */
+  var h2=Math.max(0,Math.min(hc*0.8+(cortico==="y"?0.2:0),1));
   var h3=nu;var h4=gi;var h5=ev;
 
+  /* Fase 6 -- integracao ponderada. Hierarquia validada (importancia de
+     permutacao agrupada do Random Forest, variaveis nao-circulares):
+     H1 0.53 > H3 0.15 > H5 0.12 > H2 0.11 > H4 0.09. Soma = 1.00.
+     O termo circular skS*0.15 foi REMOVIDO. */
   var raw=h1*0.53+h3*0.15+h5*0.12+h2*0.11+h4*0.09;
-  var logit=(raw-0.40)*5.4;
+
+  /* Fase 7 -- transformacao logistica. offset 0.42, multiplicador 6.0.
+     Calibrado para que um gato medio da coorte de referencia (escore bruto
+     medio 0.2406, n=1512) produza probabilidade proxima da prevalencia
+     base de 25.5%. Teto 0.85 (nao 0.95) porque a discriminacao do modelo
+     de referencia e modesta (AUC 0.69-0.73): uma ferramenta de triagem com
+     discriminacao moderada nao deve emitir quase-certezas. */
+  var logit=(raw-0.42)*6.0;
   var prob=1/(1+Math.exp(-logit));
   prob=Math.max(0.05,Math.min(prob,0.85));
   return {prob:prob,h:{h1:h1,h2:h2,h3:h3,h4:h4,h5:h5},nSk:nSk,nC:nC};
@@ -328,11 +357,11 @@ pt:{
   aboutTitle:"Sobre esta pesquisa",
   aboutT1:'Esta ferramenta resulta da dissertacao de mestrado apresentada ao Messerli Research Institute da Universidade de Medicina Veterinaria de Viena (Diretor: Univ.-Prof. Dr. Herwig Grimm).',
   aboutT2:'"Desnutricao em Gatos com Dermatite? Um Estudo Transversal Global" — estudo com 1.512 gatos domesticos sobre a relacao entre dermatite felina e fatores nutricionais, demograficos, de saude, gastrointestinais e ambientais.',
-  aboutT3:'O modelo preditivo corrigido (AUC 0.69–0.73) integra cinco hipoteses validadas para triagem de risco dermatologico.',
-  aboutT4:'Dissertacao de Mestrado | Mestrado Interdisciplinar em Interacoes Humano-Animais | 310801 WS 2024/25',
-  aboutT5:'Isabele Pedrozo Martins (Mat: 12304239) | Orientadora: Franziska Roth-Walter | Viena, marco 2026',
+  aboutT3:'O modelo de referencia validado por validacao cruzada apresenta discriminacao modesta (AUC 0,69-0,73; VPN aprox. 87%), sendo mais util para excluir do que para confirmar dermatite. Esta aplicacao implementa uma aproximacao linear simplificada desse modelo (AUC aprox. 0,65), destinada a estratificacao de risco e nao a diagnostico.',
+  aboutT4:'Dissertacao de Mestrado | Mestrado Interdisciplinar em Interacoes Humano-Animais | 310801',
+  aboutT5:'Isabele Pedrozo Martins (Mat: 12304239) | Orientadora: Franziska Roth-Walter | Viena, agosto 2026',
   audioLabel:"Ouca sobre a pesquisa",audioSub:"Apresentacao em audio",
-  mPop:"Populacao",mPrev:"Prevalencia",mAUC:"Modelo AUC",
+  mPop:"Populacao",mPrev:"Prevalencia",mAUC:"AUC do modelo (VC)",
   hypC:"Contribuicao por fator",
   hL:{h1:"Idade e fisico",h2:"Saude geral",h3:"Alimentacao",h4:"Barriga",h5:"Ambiente"},
   hLv:{h1:"Demografia",h2:"Complexidade de saude",h3:"Nutricao",h4:"Gastrointestinal",h5:"Ambiente"},
@@ -342,8 +371,8 @@ pt:{
   rMsg_t:{low:"Otimas noticias! O perfil do seu gato indica baixa probabilidade de problemas de pele. Continue cuidando bem!",mod:"Alguns fatores merecem atencao. Nao significa doenca, mas vale conversar com o veterinario.",high:"Varios fatores de risco encontrados. Recomendamos agendar consulta veterinaria."},
   rMsg_v:{low:"Baixa probabilidade de dermatite. Monitoramento padrao.",mod:"Risco moderado. Avaliacao preventiva indicada.",high:"Alto risco. Investigacao dermatologica prioritaria."},
   resT:"Resultado da avaliacao do seu gatinho",resV:"Resultado da triagem clinica",
-  disc_t:"Este teste e orientativo e nao substitui consulta veterinaria. Baseado em estudo com 1.512 gatos — Messerli Research Institute, Vetmeduni Wien.",
-  disc_v:"Triagem baseada em 1.512 gatos (Messerli Research Institute, Vetmeduni Wien). Modelo AUC 0.69–0.73. Confirmar positivos com exame clinico.",
+  disc_t:"Este teste e orientativo e nao substitui consulta veterinaria. Baseado em estudo com 1.512 gatos — Messerli Research Institute, Vetmeduni Wien. Modelo de referencia com discriminacao modesta (AUC 0,69-0,73).",
+  disc_v:"Triagem baseada em 1.512 gatos (Messerli Research Institute, Vetmeduni Wien). Modelo de referencia AUC 0,69-0,73 (validacao cruzada 5-fold); motor linear simplificado AUC aprox. 0,65. VPN superior ao VPP: mais confiavel para excluir do que para confirmar. Confirmar positivos com exame clinico.",
   s1_age:"Quantos anos tem o gatinho?",s1_age_v:"Idade (anos)",s1_wt:"Quanto pesa? (kg)",s1_wt_v:"Peso (kg)",
   s1_sex:"Sexo",s1_f:"Femea",s1_m:"Macho",s1_cast:"E castrado(a)?",s1_cast_v:"Castrado",
   s1_y:"Sim",s1_n:"Nao",s1_u:"Nao sei",s1_breed:"Qual a raca?",s1_breed_v:"Raca",s1_breed_ph:"Ex: Persa, Siames, SRD...",  s1_age_ph:"Ex: 3, 5.5, 12...",s1_wt_ph:"Ex: 3.5, 4.8, 6...",
@@ -358,6 +387,7 @@ pt:{
   s2_cortico:"Usa corticoide?",s2_cortico_v:"Corticoides",
   s3_skin:"Observa algum destes sinais?",s3_skin_v:"Sinais dermatologicos",
   s3_skin_hint:"Toque em todos que nota ou Nenhum",s3_skin_hint_v:"Sinais presentes",
+  s3_note:"Estes sinais sao registrados como retrato da condicao atual, mas nao entram no calculo de risco: usar a manifestacao da dermatite para prever dermatite tornaria o modelo circular.",
   s3_dandruff:"Caspa",s3_alopecia:"Falhas no pelo",s3_greasy:"Pelo gorduroso",s3_scabs:"Crostas/feridas",
   s3_dull:"Pelo opaco",s3_hairloss:"Queda de pelo",s3_itch:"Se coca demais",s3_redness:"Pele vermelha",
   s3_lesions:"Feridas abertas",s3_ear:"Coca as orelhas",s3_acne:"Acne no queixo",
@@ -382,8 +412,8 @@ pt:{
   tip_food_react:"Reacao a comida pode causar problemas de pele.",
   tip_comorbid:"Outros problemas de saude aumentam risco na pele.",
   tip_vet_visit:"Consulta veterinaria recomendada.",
-  tip_smoke_t:"Fumaca piora problemas de pele em gatos.",
-  tip_dogs_t:"Gatos com caes: menor risco (21%% vs 27%%) - fator protetor.",
+  tip_smoke_t:"Neste estudo o fumo passivo nao mostrou associacao independente com dermatite; ainda assim, evitar fumar perto do gato e recomendavel.",
+  tip_dogs_t:"No estudo, gatos que vivem com caes tiveram MENOS dermatite (20,9% contra 27,2%).",
   tip_v_routine:"Exame dermatologico de rotina anual.",
   tip_v_maintain:"Manter protocolo e prevencao antiparasitaria.",
   tip_v_3mo:"Avaliacao dermatologica em 3 meses.",
@@ -403,11 +433,11 @@ en:{
   aboutTitle:"About this research",
   aboutT1:'This tool results from the master\'s dissertation at the Messerli Research Institute, University of Veterinary Medicine Vienna (Director: Univ.-Prof. Dr. Herwig Grimm).',
   aboutT2:'"Malnutrition in Cats with Dermatitis? A Global Cross-Sectional Study" — a study of 1,512 domestic cats on feline dermatitis risk factors.',
-  aboutT3:'The corrected model (AUC 0.69–0.73) integrates five validated hypotheses for dermatological risk screening.',
-  aboutT4:'Master\'s Dissertation | Interdisciplinary Master in Human-Animal Interactions | 310801 WS 2024/25',
-  aboutT5:'Isabele Pedrozo Martins (ID: 12304239) | Supervisor: Franziska Roth-Walter | Vienna, March 2026',
+  aboutT3:'The cross-validated reference model shows modest discrimination (AUC 0.69-0.73; NPV approx. 87%) and is more informative for excluding than for confirming dermatitis. This application implements a simplified linear approximation of that model (AUC approx. 0.65), intended for risk stratification rather than diagnosis.',
+  aboutT4:'Master\'s Dissertation | Interdisciplinary Master in Human-Animal Interactions | 310801',
+  aboutT5:'Isabele Pedrozo Martins (ID: 12304239) | Supervisor: Franziska Roth-Walter | Vienna, August 2026',
   audioLabel:"Listen about the research",audioSub:"Audio presentation",
-  mPop:"Population",mPrev:"Prevalence",mAUC:"Model AUC",
+  mPop:"Population",mPrev:"Prevalence",mAUC:"Model AUC (CV)",
   hypC:"Factor contribution",
   hL:{h1:"Age & traits",h2:"Overall health",h3:"Diet",h4:"Tummy",h5:"Environment"},
   hLv:{h1:"Demographics",h2:"Health complexity",h3:"Nutrition",h4:"Gastrointestinal",h5:"Environment"},
@@ -417,8 +447,8 @@ en:{
   rMsg_t:{low:"Great news! Low probability of skin issues. Keep up the good care!",mod:"Some factors need attention. Worth discussing with your vet.",high:"Multiple risk factors found. We recommend a vet visit."},
   rMsg_v:{low:"Low dermatitis probability. Standard monitoring.",mod:"Moderate risk. Preventive assessment indicated.",high:"High risk. Priority dermatological investigation."},
   resT:"Your cat's assessment",resV:"Clinical screening result",
-  disc_t:"This is a screening tool only and does not replace veterinary consultation. Based on 1,512 cats — Messerli Research Institute, Vetmeduni Wien.",
-  disc_v:"Screening based on 1,512 cats (Messerli Research Institute, Vetmeduni Wien). Model AUC 0.69–0.73. Confirm positives with clinical exam.",
+  disc_t:"This is a screening tool only and does not replace veterinary consultation. Based on 1,512 cats — Messerli Research Institute, Vetmeduni Wien. Reference model shows modest discrimination (AUC 0.69-0.73).",
+  disc_v:"Screening based on 1,512 cats (Messerli Research Institute, Vetmeduni Wien). Reference model AUC 0.69-0.73 (5-fold cross-validation); simplified linear engine AUC approx. 0.65. NPV exceeds PPV: more reliable for excluding than for confirming. Confirm positives with clinical exam.",
   s1_age:"How old is your cat? (years)",s1_age_v:"Age (years)",s1_wt:"Weight (kg)",s1_wt_v:"Weight (kg)",
   s1_sex:"Sex",s1_f:"Female",s1_m:"Male",s1_cast:"Neutered/Spayed?",s1_cast_v:"Neutered/Spayed",
   s1_y:"Yes",s1_n:"No",s1_u:"Don't know",s1_breed:"Breed",s1_breed_v:"Breed",s1_breed_ph:"e.g. Persian, Siamese, Mixed...",  s1_age_ph:"e.g. 3, 5.5, 12...",s1_wt_ph:"e.g. 3.5, 4.8, 6...",
@@ -433,6 +463,7 @@ en:{
   s2_cortico:"Uses corticosteroids?",s2_cortico_v:"Corticosteroid use",
   s3_skin:"Do you notice any of these signs?",s3_skin_v:"Dermatological signs",
   s3_skin_hint:"Tap all you notice or None",s3_skin_hint_v:"All present signs",
+  s3_note:"These signs are recorded as a snapshot of the current condition but do not enter the risk calculation: using the manifestation of dermatitis to predict dermatitis would make the model circular.",
   s3_dandruff:"Dandruff/flaking",s3_alopecia:"Bald patches",s3_greasy:"Greasy coat",s3_scabs:"Scabs/sores",
   s3_dull:"Dull coat",s3_hairloss:"Excessive hair loss",s3_itch:"Scratches/licks a lot",s3_redness:"Red skin",
   s3_lesions:"Open wounds",s3_ear:"Scratches ears",s3_acne:"Chin acne",
@@ -457,8 +488,8 @@ en:{
   tip_food_react:"Food reactions can affect skin.",
   tip_comorbid:"Health issues increase skin risk.",
   tip_vet_visit:"Vet visit recommended.",
-  tip_smoke_t:"Smoke worsens cat skin problems.",
-  tip_dogs_t:"Cats with dogs: lower risk (21%% vs 27%%) - protective.",
+  tip_smoke_t:"In this study passive smoke showed no independent association with dermatitis; avoiding smoking near the cat is still advisable.",
+  tip_dogs_t:"In the study, cats living with dogs had LESS dermatitis (20.9% vs 27.2%).",
   tip_v_routine:"Annual dermatological exam.",
   tip_v_maintain:"Maintain protocol and antiparasitic prevention.",
   tip_v_3mo:"Dermatological assessment within 3 months.",
@@ -478,11 +509,11 @@ de:{
   aboutTitle:"Ueber diese Forschung",
   aboutT1:'Dieses Tool resultiert aus der Masterarbeit am Messerli Forschungsinstitut der Veterinaermedizinischen Universitaet Wien (Direktor: Univ.-Prof. Dr. Herwig Grimm).',
   aboutT2:'"Mangelernaehrung bei Katzen mit Dermatitis? Eine globale Querschnittsstudie" — 1.512 Katzen ueber feline Dermatitis-Risikofaktoren.',
-  aboutT3:'Das korrigierte Modell (AUC 0,69–0,73) integriert fuenf Hypothesen fuer Risiko-Screening.',
-  aboutT4:'Masterarbeit | Interdisziplinaerer Master Mensch-Tier-Interaktionen | 310801 WS 2024/25',
-  aboutT5:'Isabele Pedrozo Martins (Matr.: 12304239) | Betreuerin: Franziska Roth-Walter | Wien, Maerz 2026',
+  aboutT3:'Das kreuzvalidierte Referenzmodell zeigt eine moderate Diskrimination (AUC 0,69-0,73; NPV ca. 87%) und ist eher zum Ausschluss als zur Bestaetigung einer Dermatitis geeignet. Diese Anwendung implementiert eine vereinfachte lineare Naeherung dieses Modells (AUC ca. 0,65) zur Risikostratifizierung, nicht zur Diagnose.',
+  aboutT4:'Masterarbeit | Interdisziplinaerer Master Mensch-Tier-Interaktionen | 310801',
+  aboutT5:'Isabele Pedrozo Martins (Matr.: 12304239) | Betreuerin: Franziska Roth-Walter | Wien, August 2026',
   audioLabel:"Ueber die Forschung hoeren",audioSub:"Audio-Praesentation",
-  mPop:"Population",mPrev:"Praevalenz",mAUC:"Modell AUC",
+  mPop:"Population",mPrev:"Praevalenz",mAUC:"Modell-AUC (KV)",
   hypC:"Faktorbeitrag",
   hL:{h1:"Alter",h2:"Gesundheit",h3:"Ernaehrung",h4:"Verdauung",h5:"Umgebung"},
   hLv:{h1:"Demografie",h2:"Gesundheitskomplexitaet",h3:"Ernaehrung",h4:"Gastrointestinal",h5:"Umgebung"},
@@ -492,8 +523,8 @@ de:{
   rMsg_t:{low:"Gute Nachricht! Geringes Hautrisiko. Weiter so!",mod:"Einige Faktoren beachtenswert. Tierarztbesuch empfohlen.",high:"Mehrere Risikofaktoren. Dringend Tierarzt aufsuchen."},
   rMsg_v:{low:"Geringe Dermatitis-Wahrscheinlichkeit. Standardueberwachung.",mod:"Maessiges Risiko. Praeventive Bewertung angezeigt.",high:"Hohes Risiko. Priorisierte dermatologische Untersuchung."},
   resT:"Bewertung Ihrer Katze",resV:"Klinisches Screening-Ergebnis",
-  disc_t:"Nur zur Information. Ersetzt nicht tieraerztliche Beratung. Basiert auf 1.512 Katzen — Messerli Research Institute, Vetmeduni Wien.",
-  disc_v:"Screening: 1.512 Katzen, Messerli/Vetmeduni Wien. AUC 0,69–0,73. Positives mit klinischer Untersuchung bestaetigen.",
+  disc_t:"Nur zur Information. Ersetzt nicht tieraerztliche Beratung. Basiert auf 1.512 Katzen — Messerli Research Institute, Vetmeduni Wien. Referenzmodell mit moderater Diskrimination (AUC 0,69-0,73).",
+  disc_v:"Screening: 1.512 Katzen, Messerli/Vetmeduni Wien. Referenzmodell AUC 0,69-0,73 (5-fache Kreuzvalidierung); vereinfachtes lineares Modell AUC ca. 0,65. NPV hoeher als PPV: eher zum Ausschluss geeignet. Positives mit klinischer Untersuchung bestaetigen.",
   s1_age:"Alter Ihrer Katze (Jahre)?",s1_age_v:"Alter (Jahre)",s1_wt:"Gewicht (kg)",s1_wt_v:"Gewicht (kg)",
   s1_sex:"Geschlecht",s1_f:"Weiblich",s1_m:"Maennlich",s1_cast:"Kastriert?",s1_cast_v:"Kastriert",
   s1_y:"Ja",s1_n:"Nein",s1_u:"Weiss nicht",s1_breed:"Rasse",s1_breed_v:"Rasse",s1_breed_ph:"z.B. Perser, Siamese, Mischling...",  s1_age_ph:"z.B. 3, 5.5, 12...",s1_wt_ph:"z.B. 3.5, 4.8, 6...",
@@ -508,6 +539,7 @@ de:{
   s2_cortico:"Nimmt Kortison?",s2_cortico_v:"Kortikosteroid-Einsatz",
   s3_skin:"Beobachten Sie diese Zeichen?",s3_skin_v:"Dermatologische Zeichen",
   s3_skin_hint:"Alle beobachteten waehlen oder Keine",s3_skin_hint_v:"Vorhandene Zeichen",
+  s3_note:"Diese Zeichen werden als Momentaufnahme des aktuellen Zustands erfasst, fliessen aber nicht in die Risikoberechnung ein: die Manifestation der Dermatitis zur Vorhersage der Dermatitis zu verwenden, wuerde das Modell zirkulaer machen.",
   s3_dandruff:"Schuppen",s3_alopecia:"Kahle Stellen",s3_greasy:"Fettiges Fell",s3_scabs:"Krusten/Wunden",
   s3_dull:"Stumpfes Fell",s3_hairloss:"Haarausfall",s3_itch:"Kratzt viel",s3_redness:"Rote Haut",
   s3_lesions:"Offene Wunden",s3_ear:"Kratzt Ohren",s3_acne:"Kinn-Akne",
@@ -532,8 +564,8 @@ de:{
   tip_food_react:"Futterreaktionen koennen Haut betreffen.",
   tip_comorbid:"Vorerkrankungen erhoehen Hautrisiko.",
   tip_vet_visit:"Tierarztbesuch empfohlen.",
-  tip_smoke_t:"Rauch verschlimmert Hautprobleme.",
-  tip_dogs_t:"Katzen mit Hunden: geringeres Risiko (21%% vs 27%%) - schuetzend.",
+  tip_smoke_t:"In dieser Studie zeigte Passivrauch keinen unabhaengigen Zusammenhang mit Dermatitis; Rauchen in der Naehe der Katze zu vermeiden ist dennoch ratsam.",
+  tip_dogs_t:"In der Studie hatten Katzen mit Hunden WENIGER Dermatitis (20,9% vs 27,2%).",
   tip_v_routine:"Jaehrliche dermatologische Untersuchung.",
   tip_v_maintain:"Management und Parasitenvorsorge beibehalten.",
   tip_v_3mo:"Dermatologische Bewertung in 3 Monaten.",
@@ -689,7 +721,7 @@ function openAbout(){
     '<div class="about-grid"><div class="about-stat"><div class="about-stat-val">'+popVal+'</div><div class="about-stat-lbl">'+t.mPop+'</div></div>'+
     '<div class="about-stat"><div class="about-stat-val">520</div><div class="about-stat-lbl">Variables</div></div>'+
     '<div class="about-stat"><div class="about-stat-val">5</div><div class="about-stat-lbl">Hypotheses</div></div>'+
-    '<div class="about-stat"><div class="about-stat-val">0.69–0.73</div><div class="about-stat-lbl">AUC</div></div></div>'+
+    '<div class="about-stat"><div class="about-stat-val">0.69-0.73</div><div class="about-stat-lbl">AUC (CV)</div></div></div>'+
     '<div style="border-top:1px solid var(--card-border);padding-top:10px">'+
     '<p style="font-size:0.7rem;color:var(--text3);line-height:1.6;margin-bottom:4px">'+t.aboutT4+'</p>'+
     '<p style="font-size:0.7rem;color:var(--text3);line-height:1.6">'+t.aboutT5+'</p></div>'+
@@ -736,7 +768,7 @@ function render(){
     '<div class="about-grid"><div class="about-stat"><div class="about-stat-val">'+popVal+'</div><div class="about-stat-lbl">'+t.mPop+'</div></div>'+
     '<div class="about-stat"><div class="about-stat-val">520</div><div class="about-stat-lbl">Variables</div></div>'+
     '<div class="about-stat"><div class="about-stat-val">5</div><div class="about-stat-lbl">Hypotheses</div></div>'+
-    '<div class="about-stat"><div class="about-stat-val">0.69–0.73</div><div class="about-stat-lbl">AUC</div></div></div>'+
+    '<div class="about-stat"><div class="about-stat-val">0.69-0.73</div><div class="about-stat-lbl">AUC (CV)</div></div></div>'+
     '<div style="border-top:1px solid var(--card-border);padding-top:10px">'+
     '<p style="font-size:0.7rem;color:var(--text3);line-height:1.6;margin-bottom:4px">'+t.aboutT4+'</p>'+
     '<p style="font-size:0.7rem;color:var(--text3);line-height:1.6">'+t.aboutT5+'</p></div>'+
@@ -820,7 +852,7 @@ function render(){
     '<div class="anim-up d3" style="margin-bottom:18px">'+tips+'</div>'+
     '<div class="metrics anim-up d4"><div class="metric"><div class="metric-val">'+popVal+'</div><div class="metric-label">'+t.mPop+'</div></div>'+
     '<div class="metric"><div class="metric-val">25.5%</div><div class="metric-label">'+t.mPrev+'</div></div>'+
-    '<div class="metric"><div class="metric-val">0.69–0.73</div><div class="metric-label">'+t.mAUC+'</div></div></div>'+
+    '<div class="metric"><div class="metric-val">0.69-0.73</div><div class="metric-label">'+t.mAUC+'</div></div></div>'+
     '<div class="disc anim-up d5"><div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:6px;opacity:0.6"><img src="'+LOGO_VM+'" alt="" style="height:22px"><img src="'+LOGO_MS+'" alt="" style="height:20px"></div><p>'+disc+'</p></div>'+
     '<div style="text-align:center;margin-bottom:10px" class="anim-up d5"><button class="btn-ghost" onclick="openAbout()">'+t.about+'</button></div>'+
     '<div class="nav-row anim-up d6"><button class="btn btn-outline" onclick="set({step:1,answers:{},showResult:false})">'+t.newA+'</button>'+
@@ -899,6 +931,7 @@ function render(){
     ];
 
     stepHTML=
+      '<div class="field-hint">'+t.s3_note+'</div>'+
       '<div class="field"><label class="field-label">'+skinLabel+'</label>'+
       '<div class="field-hint">'+skinHint+'</div><div class="options">'+
       skinSigns.map(function(s){return '<span class="opt'+(ck(s[0])?" warn":"")+'" onclick="toggleCheck(\''+s[0]+'\')">'+s[1]+'</span>';}).join("")+
