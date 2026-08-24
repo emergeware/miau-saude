@@ -25,11 +25,13 @@ derivada de um estudo transversal global com 1.512 gatos domésticos.
 
 O **MiauSaude** é uma ferramenta de triagem que estima o risco de dermatite felina a partir
 de fatores nutricionais, demográficos, de saúde, gastrointestinais e ambientais. O modelo
-preditivo integra cinco hipóteses validadas e foi calibrado sobre uma base de 1.512 gatos.
+integra cinco hipóteses validadas, calibradas sobre uma base de 1.512 gatos.
 
 A aplicação é totalmente **estática** (um único `index.html` com HTML, CSS e JavaScript
 embutidos, sem dependências de build) e funciona como **PWA instalável**: ao ser adicionada
 à tela inicial do celular, abre em tela cheia, como um aplicativo nativo.
+
+Versão atual: **v8** — motor de cálculo alinhado à versão final da dissertação.
 
 ## Funcionalidades
 
@@ -45,16 +47,73 @@ embutidos, sem dependências de build) e funciona como **PWA instalável**: ao s
 
 ## Modelo preditivo
 
-| Característica            | Valor                                              |
-| ------------------------ | -------------------------------------------------- |
-| Base de dados            | 1.512 gatos domésticos                             |
-| Variáveis analisadas     | 520                                                |
-| Hipóteses integradas     | 5 (validadas)                                      |
-| Desempenho (AUC)         | 0.69 – 0.73                                         |
-| Prevalência de referência| 25,5 %                                             |
+| Característica                   | Valor                                      |
+| -------------------------------- | ------------------------------------------ |
+| Base de dados                    | 1.512 gatos domésticos                     |
+| Variáveis analisadas             | 520                                        |
+| Hipóteses integradas             | 5 (validadas)                              |
+| AUC — modelo de referência       | 0,69 – 0,73 (validação cruzada 5-fold)     |
+| AUC — motor linear da aplicação  | ≈ 0,65                                     |
+| VPN (valor preditivo negativo)   | ≈ 87 %                                     |
+| Prevalência de referência        | 25,5 %                                     |
+| Faixa de probabilidade emitida   | 5 % – 85 %                                 |
+
+A discriminação do modelo é **modesta**: ele é mais informativo para *excluir* do que para
+*confirmar* dermatite. O VPN supera o VPP, e é por isso que o teto de probabilidade é 85 % e
+não 95 % — uma ferramenta de triagem com discriminação moderada não deve emitir
+quase-certezas.
+
+### Hierarquia entre domínios
+
+O escore bruto integra as cinco hipóteses com pesos derivados da importância de permutação
+agrupada do Random Forest, restrita a variáveis **não-circulares**:
+
+| Peso | Hipótese | Domínio                                    |
+| ---- | -------- | ------------------------------------------ |
+| 0,53 | H1       | Demografia (idade, peso, sexo, raça)       |
+| 0,15 | H3       | Nutrição                                   |
+| 0,12 | H5       | Ambiente                                   |
+| 0,11 | H2       | Complexidade de saúde                      |
+| 0,09 | H4       | Gastrointestinal                           |
+
+A soma dos pesos é 1,00. A probabilidade final é `sigmoid((raw − 0,42) × 6,0)`, limitada ao
+intervalo [0,05 – 0,85].
+
+### Por que os sinais cutâneos não pontuam
+
+O passo 3 do questionário coleta 13 sinais dermatológicos e um grau de severidade, mas
+**eles não entram no cálculo de risco**. Usar a manifestação da dermatite para prever
+dermatite tornaria o modelo circular.
+
+Os sinais são registrados como retrato da condição atual e exibidos no resultado. Marcar
+todos os 13 não altera a probabilidade em um único ponto percentual — esse é, inclusive, um
+dos testes de regressão do motor.
+
+### Achados que contrariam a intuição
+
+- **Conviver com cães é protetor** (OR ajustado 0,67; p = 0,005): 20,9 % de dermatite entre
+  gatos que vivem com cães, contra 27,2 % entre os que não vivem.
+- **Diarreia** é a única variável gastrointestinal independentemente associada
+  (OR 2,57; p = 0,010). **Vômito** é confundido por complexidade de saúde
+  (OR ajustado 1,13; p = 0,536) e pesa bem menos.
+- **Acesso externo** e **fumo passivo** não mostraram associação independente
+  (OR 1,05; p = 0,71 e OR 1,07; p = 0,70). Permanecem na interface por completude, com peso
+  residual.
 
 > A ferramenta é **orientativa** e **não substitui** a consulta veterinária. Resultados
 > positivos devem ser confirmados por exame clínico.
+
+## Limitações conhecidas
+
+Divergências entre o motor publicado e a dissertação estão registradas como
+[issues](https://github.com/emergeware/miau-saude/issues) e aguardam decisão científica:
+
+| Issue | Assunto                                       | Consequência                                                        |
+| ----- | --------------------------------------------- | ------------------------------------------------------------------- |
+| [#1](https://github.com/emergeware/miau-saude/issues/1) | `hc` conta a alergia duas vezes | Perfis com alergia + comorbidade podem subir de banda de risco     |
+| [#2](https://github.com/emergeware/miau-saude/issues/2) | Bônus `allergy +0.30` é circular | Aguarda relabelagem do questionário e sign-off                     |
+| [#3](https://github.com/emergeware/miau-saude/issues/3) | `wet_only` ausente em H3        | Fator dietético forte (OR 2,61) não implementado, por acompanhar a tese |
+| [#4](https://github.com/emergeware/miau-saude/issues/4) | Efeito do cão sob clamp em 0    | O efeito protetor só aparece se houver outro risco ambiental       |
 
 ## Instalação no celular (tela cheia)
 
@@ -104,6 +163,20 @@ npx serve .
 
 Depois acesse `http://localhost:8000`.
 
+> Antes de validar no navegador, confirme que a porta escolhida serve *este* projeto —
+> `curl -s http://127.0.0.1:8000/ | head -8` deve mostrar o `<title>` do MiauSaude. Uma porta
+> já ocupada por outro servidor local serve a página errada em silêncio.
+
+### Motor de cálculo
+
+O motor vive na função `compute()` de `index.html`. Ele não depende do DOM: recebe as
+respostas por `S.answers` e devolve `{prob, h:{h1..h5}, nSk, nC}`.
+
+Isso permite testá-lo isoladamente, extraindo o trecho entre `function ck(k){` e o fim de
+`function riskLevel(...)` e executando-o em Node com `vm.runInContext`, sobre um
+`var S={answers:{}}`. Testar o código real evita que uma reimplementação paralela esconda
+justamente o defeito procurado.
+
 ## Tecnologias
 
 - HTML, CSS e JavaScript puros (sem framework, sem build)
@@ -122,8 +195,8 @@ Herwig Grimm).
 
 - **Autora:** Isabele Pedrozo Martins (Mat. 12304239)
 - **Orientadora:** Franziska Roth-Walter
-- **Programa:** Mestrado Interdisciplinar em Interações Humano-Animais — 310801, WS 2024/25
-- **Local e data:** Viena, março de 2026
+- **Programa:** Mestrado Interdisciplinar em Interações Humano-Animais — 310801
+- **Local e data:** Viena, agosto de 2026
 
 ## Licença e créditos
 
